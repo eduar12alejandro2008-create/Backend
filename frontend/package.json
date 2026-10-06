@@ -1,0 +1,28 @@
+{
+  "name": "frontend-practica",
+  "version": "1.0.0",
+  "description": "Frontend Quasar + Vue 3 para el backend de practica",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.16.12",
+    "axios": "^1.7.2",
+    "pinia": "^2.1.7",
+    "quasar": "^2.16.5",
+    "vue": "^3.4.31",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@quasar/vite-plugin": "^1.7.1",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "sass": "^1.77.8",
+    "vite": "^5.3.3"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  }
+}
