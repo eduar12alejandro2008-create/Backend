@@ -124,6 +124,31 @@ onMounted(async () => {
     totalAprendices.value = aprendicesRes.data.length
     cursosActivos.value = cursosActivosRes.data.length
     aprendicesActivos.value = aprendicesActivosRes.data.length
+
+    actividadReciente.value = [
+      ...cursosRes.data.map((c) => ({
+        icon: 'school',
+        color: 'primary',
+        texto: `Curso creado: ${c.nombre}`,
+        fecha: c.createdAt
+      })),
+      ...aprendicesRes.data.map((a) => ({
+        icon: 'person',
+        color: 'secondary',
+        texto: `Aprendiz registrado: ${a.nombre}`,
+        fecha: a.createdAt
+      }))
+    ]
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      .slice(0, 5)
+      .map((item) => ({
+        ...item,
+        fecha: new Date(item.fecha).toLocaleDateString('es-CO', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        })
+      }))
   } catch (error) {
     console.error('Error cargando dashboard:', error)
   }

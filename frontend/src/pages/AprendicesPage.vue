@@ -1,12 +1,21 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
-      <div>
+    <div class="row items-center q-mb-md q-col-gutter-md">
+      <div class="col-12 col-md-auto">
         <div class="text-h4 text-weight-bold text-dark">Aprendices</div>
         <div class="text-caption text-grey-6">Gestión de aprendices del sistema</div>
       </div>
       <q-space />
-      <q-btn color="secondary" icon="add" label="Nuevo Aprendiz" @click="openDialog()" unelevated rounded />
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-input v-model="filter" dense outlined debounce="300" placeholder="Buscar aprendiz..." clearable>
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+      <div class="col-auto">
+        <q-btn color="secondary" icon="add" label="Nuevo Aprendiz" @click="openDialog()" unelevated rounded />
+      </div>
     </div>
 
     <q-card flat>
@@ -15,8 +24,10 @@
           :rows="store.aprendices"
           :columns="columns"
           :loading="store.loading"
+          :filter="filter"
           row-key="_id"
           :pagination="{ rowsPerPage: 10 }"
+          no-data-label="No hay aprendices registrados"
           flat
         >
           <template v-slot:body-cell-curso="props">
@@ -55,7 +66,7 @@
                 icon="check_circle"
                 color="positive"
                 size="sm"
-                @click="activar(props.row)"
+                @click="confirmarActivar(props.row)"
               >
                 <q-tooltip>Activar</q-tooltip>
               </q-btn>
@@ -72,18 +83,18 @@
           <div class="text-h6">{{ editando ? 'Editar Aprendiz' : 'Nuevo Aprendiz' }}</div>
         </q-card-section>
         <q-card-section class="q-pt-lg">
-          <q-form @submit="onSubmit" class="q-gutter-md">
-            <q-input v-model="form.documento" label="Documento" outlined dense :rules="[val => !!val || 'Requerido']">
+          <q-form ref="formRef" @submit="onSubmit" class="q-gutter-md">
+            <q-input v-model="form.documento" label="Documento" outlined dense :rules="[required()]">
               <template v-slot:prepend>
                 <q-icon name="badge" color="secondary" />
               </template>
             </q-input>
-            <q-input v-model="form.nombre" label="Nombre" outlined dense :rules="[val => !!val || 'Requerido']">
+            <q-input v-model="form.nombre" label="Nombre" outlined dense :rules="[required()]">
               <template v-slot:prepend>
                 <q-icon name="person" color="secondary" />
               </template>
             </q-input>
-            <q-input v-model="form.email" type="email" label="Email" outlined dense :rules="[val => !!val || 'Requerido']">
+            <q-input v-model="form.email" type="email" label="Email" outlined dense :rules="[required(), validEmail()]">
               <template v-slot:prepend>
                 <q-icon name="email" color="secondary" />
               </template>
@@ -108,7 +119,7 @@
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancelar" @click="dialogOpen = false" rounded />
-          <q-btn color="secondary" label="Guardar" @click="onSubmit" :loading="saving" unelevated rounded />
+          <q-btn color="secondary" label="Guardar" @click="submitForm" :loading="saving" unelevated rounded />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -120,6 +131,7 @@ import { ref, onMounted, reactive, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAprendicesStore } from '../stores/aprendices'
 import { useCursosStore } from '../stores/cursos'
+import { required, validEmail } from '../utils/validators'
 
 const $q = useQuasar()
 const store = useAprendicesStore()
@@ -138,6 +150,8 @@ const dialogOpen = ref(false)
 const saving = ref(false)
 const editando = ref(false)
 const editId = ref(null)
+const formRef = ref(null)
+const filter = ref('')
 
 const form = reactive({
   documento: '',
@@ -167,6 +181,12 @@ function openDialog(aprendiz = null) {
   dialogOpen.value = true
 }
 
+function submitForm() {
+  formRef.value.validate().then((success) => {
+    if (success) onSubmit()
+  })
+}
+
 async function onSubmit() {
   saving.value = true
   try {
@@ -179,7 +199,11 @@ async function onSubmit() {
     }
     dialogOpen.value = false
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.msg || 'Error', icon: 'error' })
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+      icon: 'error'
+    })
   } finally {
     saving.value = false
   }
@@ -194,18 +218,43 @@ function confirmarInactivar(aprendiz) {
     ok: { label: 'Desactivar', color: 'negative', unelevated: true },
     cancel: { label: 'Cancelar', flat: true }
   }).onOk(async () => {
-    await store.inactivarAprendiz(aprendiz._id)
-    $q.notify({ type: 'positive', message: 'Aprendiz desactivado', icon: 'check_circle' })
+    try {
+      await store.inactivarAprendiz(aprendiz._id)
+      $q.notify({ type: 'positive', message: 'Aprendiz desactivado', icon: 'check_circle' })
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+        icon: 'error'
+      })
+    }
   })
 }
 
-async function activar(aprendiz) {
-  await store.activarAprendiz(aprendiz._id)
-  $q.notify({ type: 'positive', message: 'Aprendiz activado', icon: 'check_circle' })
+function confirmarActivar(aprendiz) {
+  $q.dialog({
+    title: 'Confirmar',
+    message: `¿Activar al aprendiz "${aprendiz.nombre}"?`,
+    cancel: true,
+    persistent: true,
+    ok: { label: 'Activar', color: 'positive', unelevated: true },
+    cancel: { label: 'Cancelar', flat: true }
+  }).onOk(async () => {
+    try {
+      await store.activarAprendiz(aprendiz._id)
+      $q.notify({ type: 'positive', message: 'Aprendiz activado', icon: 'check_circle' })
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+        icon: 'error'
+      })
+    }
+  })
 }
 
 onMounted(async () => {
-  await cursosStore.fetchCursos()
+  await cursosStore.fetchCursos(0)
   await store.fetchAprendices()
 })
 </script>

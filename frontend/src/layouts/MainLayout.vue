@@ -53,7 +53,7 @@
               <q-item-label class="text-weight-medium">Aprendices</q-item-label>
             </q-item-section>
           </q-item>
-          <q-item clickable to="/usuarios" exact class="rounded-borders q-mb-sm" active-class="bg-primary text-white">
+          <q-item v-if="auth.rolUsuario === 'ADMIN'" clickable to="/usuarios" exact class="rounded-borders q-mb-sm" active-class="bg-primary text-white">
             <q-item-section avatar>
               <q-icon name="manage_accounts" />
             </q-item-section>

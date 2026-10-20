@@ -16,12 +16,12 @@
           </q-card-section>
           <q-card-section>
             <q-form @submit="onSubmit" class="q-gutter-md">
-              <q-input v-model="form.nombre" label="Nombre completo" outlined dense :rules="[val => !!val || 'Requerido']">
+              <q-input v-model="form.nombre" label="Nombre completo" outlined dense :rules="[required()]">
                 <template v-slot:prepend>
                   <q-icon name="person" color="accent" />
                 </template>
               </q-input>
-              <q-input v-model="form.email" type="email" label="Correo electrónico" outlined dense :rules="[val => !!val || 'Requerido']">
+              <q-input v-model="form.email" type="email" label="Correo electrónico" outlined dense :rules="[required(), validEmail()]">
                 <template v-slot:prepend>
                   <q-icon name="email" color="accent" />
                 </template>
@@ -32,7 +32,7 @@
                 label="Contraseña"
                 outlined
                 dense
-                :rules="[val => !!val || 'Requerido', val => val.length >= 6 || 'Mínimo 6 caracteres']"
+                :rules="[required(), val => val.length >= 6 || 'Mínimo 6 caracteres']"
               >
                 <template v-slot:prepend>
                   <q-icon name="lock" color="accent" />
@@ -79,6 +79,7 @@
 import { ref, reactive } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
+import { required, validEmail } from '../utils/validators'
 
 const $q = useQuasar()
 const auth = useAuthStore()
@@ -103,7 +104,11 @@ async function onSubmit() {
     form.password = ''
     form.rol = 'USER'
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.msg || 'Error al crear usuario', icon: 'error' })
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error al crear usuario',
+      icon: 'error'
+    })
   } finally {
     saving.value = false
   }

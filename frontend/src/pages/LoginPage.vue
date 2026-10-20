@@ -18,7 +18,7 @@
               label="Correo electrónico"
               outlined
               dense
-              :rules="[val => !!val || 'El correo es requerido']"
+              :rules="[required('El correo es requerido')]"
             >
               <template v-slot:prepend>
                 <q-icon name="email" color="primary" />
@@ -30,7 +30,7 @@
               label="Contraseña"
               outlined
               dense
-              :rules="[val => !!val || 'La contraseña es requerida']"
+              :rules="[required('La contraseña es requerida')]"
             >
               <template v-slot:prepend>
                 <q-icon name="lock" color="primary" />
@@ -64,6 +64,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
+import { required } from '../utils/validators'
 
 const $q = useQuasar()
 const router = useRouter()

@@ -1,12 +1,21 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
-      <div>
+    <div class="row items-center q-mb-md q-col-gutter-md">
+      <div class="col-12 col-md-auto">
         <div class="text-h4 text-weight-bold text-dark">Cursos</div>
         <div class="text-caption text-grey-6">Gestión de cursos del sistema</div>
       </div>
       <q-space />
-      <q-btn color="primary" icon="add" label="Nuevo Curso" @click="openDialog()" unelevated rounded />
+      <div class="col-12 col-sm-6 col-md-3">
+        <q-input v-model="filter" dense outlined debounce="300" placeholder="Buscar curso..." clearable>
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+      <div class="col-auto">
+        <q-btn color="primary" icon="add" label="Nuevo Curso" @click="openDialog()" unelevated rounded />
+      </div>
     </div>
 
     <q-card flat>
@@ -15,8 +24,10 @@
           :rows="store.cursos"
           :columns="columns"
           :loading="store.loading"
+          :filter="filter"
           row-key="_id"
           :pagination="{ rowsPerPage: 10 }"
+          no-data-label="No hay cursos registrados"
           flat
         >
           <template v-slot:body-cell-status="props">
@@ -47,7 +58,7 @@
                 icon="check_circle"
                 color="positive"
                 size="sm"
-                @click="activar(props.row)"
+                @click="confirmarActivar(props.row)"
               >
                 <q-tooltip>Activar</q-tooltip>
               </q-btn>
@@ -64,13 +75,13 @@
           <div class="text-h6">{{ editando ? 'Editar Curso' : 'Nuevo Curso' }}</div>
         </q-card-section>
         <q-card-section class="q-pt-lg">
-          <q-form @submit="onSubmit" class="q-gutter-md">
-            <q-input v-model="form.codigo" label="Código" outlined dense :rules="[val => !!val || 'Requerido']">
+          <q-form ref="formRef" @submit="onSubmit" class="q-gutter-md">
+            <q-input v-model="form.codigo" label="Código" outlined dense :rules="[required()]">
               <template v-slot:prepend>
                 <q-icon name="tag" color="primary" />
               </template>
             </q-input>
-            <q-input v-model="form.nombre" label="Nombre" outlined dense :rules="[val => !!val || 'Requerido']">
+            <q-input v-model="form.nombre" label="Nombre" outlined dense :rules="[required()]">
               <template v-slot:prepend>
                 <q-icon name="school" color="primary" />
               </template>
@@ -84,7 +95,7 @@
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancelar" @click="dialogOpen = false" rounded />
-          <q-btn color="primary" label="Guardar" @click="onSubmit" :loading="saving" unelevated rounded />
+          <q-btn color="primary" label="Guardar" @click="submitForm" :loading="saving" unelevated rounded />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -95,6 +106,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { useQuasar } from 'quasar'
 import { useCursosStore } from '../stores/cursos'
+import { required } from '../utils/validators'
 
 const $q = useQuasar()
 const store = useCursosStore()
@@ -111,6 +123,8 @@ const dialogOpen = ref(false)
 const saving = ref(false)
 const editando = ref(false)
 const editId = ref(null)
+const formRef = ref(null)
+const filter = ref('')
 
 const form = reactive({
   codigo: '',
@@ -135,6 +149,12 @@ function openDialog(curso = null) {
   dialogOpen.value = true
 }
 
+function submitForm() {
+  formRef.value.validate().then((success) => {
+    if (success) onSubmit()
+  })
+}
+
 async function onSubmit() {
   saving.value = true
   try {
@@ -147,7 +167,11 @@ async function onSubmit() {
     }
     dialogOpen.value = false
   } catch (error) {
-    $q.notify({ type: 'negative', message: error.response?.data?.msg || 'Error', icon: 'error' })
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+      icon: 'error'
+    })
   } finally {
     saving.value = false
   }
@@ -162,14 +186,39 @@ function confirmarInactivar(curso) {
     ok: { label: 'Desactivar', color: 'negative', unelevated: true },
     cancel: { label: 'Cancelar', flat: true }
   }).onOk(async () => {
-    await store.inactivarCurso(curso._id)
-    $q.notify({ type: 'positive', message: 'Curso desactivado', icon: 'check_circle' })
+    try {
+      await store.inactivarCurso(curso._id)
+      $q.notify({ type: 'positive', message: 'Curso desactivado', icon: 'check_circle' })
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+        icon: 'error'
+      })
+    }
   })
 }
 
-async function activar(curso) {
-  await store.activarCurso(curso._id)
-  $q.notify({ type: 'positive', message: 'Curso activado', icon: 'check_circle' })
+function confirmarActivar(curso) {
+  $q.dialog({
+    title: 'Confirmar',
+    message: `¿Activar el curso "${curso.nombre}"?`,
+    cancel: true,
+    persistent: true,
+    ok: { label: 'Activar', color: 'positive', unelevated: true },
+    cancel: { label: 'Cancelar', flat: true }
+  }).onOk(async () => {
+    try {
+      await store.activarCurso(curso._id)
+      $q.notify({ type: 'positive', message: 'Curso activado', icon: 'check_circle' })
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.errors?.[0] || error.response?.data?.msg || 'Error',
+        icon: 'error'
+      })
+    }
+  })
 }
 
 onMounted(() => store.fetchCursos())
