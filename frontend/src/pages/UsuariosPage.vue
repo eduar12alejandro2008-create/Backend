@@ -169,7 +169,7 @@ async function onSubmit() {
     form.email = ''
     form.password = ''
     form.rol = 'USER'
-    formRef.value?.resetValidation()
+    formRef.value?.reset()
     await auth.fetchUsuarios()
   } catch (error) {
     $q.notify({
