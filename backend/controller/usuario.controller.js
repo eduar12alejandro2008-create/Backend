@@ -79,4 +79,15 @@ usuarioCtrl.loginUsuario = async (req, res) => {
   }
 };
 
+// Listar usuarios. La contraseña no sale nunca: el metodo toJSON del modelo
+// la elimina antes de responder.
+usuarioCtrl.getUsuarios = async (req, res) => {
+  try {
+    const usuarios = await Usuario.find().sort({ createdAt: -1 });
+    res.json(usuarios);
+  } catch (error) {
+    res.status(400).json({ msg: "No fue posible terminar la operacion" });
+  }
+};
+
 export { usuarioCtrl };

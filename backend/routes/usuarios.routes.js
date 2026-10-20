@@ -4,7 +4,7 @@ import { usuarioVali } from "../validations/usuario.validation.js";
 import { validateJWT } from "../middlewares/validateJWT.js";
 
 const { validateRegisterUsuario, validateLogin } = usuarioVali;
-const { registerUsuario, loginUsuario } = usuarioCtrl;
+const { registerUsuario, loginUsuario, getUsuarios } = usuarioCtrl;
 
 const routerUsuario = Router();
 
@@ -14,6 +14,10 @@ const routerUsuario = Router();
 //
 // POST /api/usuarios/login    -> iniciar sesion y recibir el token
 routerUsuario.post("/login", validateLogin, loginUsuario);
+
+// GET /api/usuarios -> listar todos los usuarios (requiere token).
+// La contraseña no sale nunca: el toJSON del modelo la elimina.
+routerUsuario.get("/", validateJWT, getUsuarios);
 
 // El REGISTRO es interno: crear cuentas es una tarea de alguien que ya entro,
 // no algo que cualquiera pueda hacer desde afuera. Por eso lleva validateJWT

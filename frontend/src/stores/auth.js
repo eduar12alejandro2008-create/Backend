@@ -5,6 +5,7 @@ import api from '../axios'
 export const useAuthStore = defineStore('auth', () => {
   const usuario = ref(JSON.parse(localStorage.getItem('usuario') || 'null'))
   const token = ref(localStorage.getItem('token') || null)
+  const usuarios = ref([])
 
   const isAuthenticated = computed(() => !!token.value)
   const nombreUsuario = computed(() => usuario.value?.nombre || '')
@@ -22,6 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
     await api.post('/usuarios/register', { nombre, email, password, rol })
   }
 
+  async function fetchUsuarios() {
+    const { data } = await api.get('/usuarios')
+    usuarios.value = data
+  }
+
   function logout() {
     token.value = null
     usuario.value = null
@@ -29,5 +35,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('usuario')
   }
 
-  return { usuario, token, isAuthenticated, nombreUsuario, rolUsuario, login, register, logout }
+  return { usuario, token, usuarios, isAuthenticated, nombreUsuario, rolUsuario, login, register, fetchUsuarios, logout }
 })

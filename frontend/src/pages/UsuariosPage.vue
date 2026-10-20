@@ -3,7 +3,7 @@
     <div class="row items-center q-mb-md">
       <div>
         <div class="text-h4 text-weight-bold text-dark">Usuarios</div>
-        <div class="text-caption text-grey-6">Registro de nuevos usuarios del sistema</div>
+        <div class="text-caption text-grey-6">Registro y gestión de usuarios del sistema</div>
       </div>
     </div>
 
@@ -15,7 +15,7 @@
             <div class="text-caption">Complete los campos para registrar un nuevo usuario</div>
           </q-card-section>
           <q-card-section>
-            <q-form @submit="onSubmit" class="q-gutter-md">
+            <q-form ref="formRef" @submit="onSubmit" class="q-gutter-md">
               <q-input v-model="form.nombre" label="Nombre completo" outlined dense :rules="[required()]">
                 <template v-slot:prepend>
                   <q-icon name="person" color="accent" />
@@ -72,11 +72,67 @@
         </q-card>
       </div>
     </div>
+
+    <div class="row q-col-gutter-md q-mt-lg">
+      <div class="col-12 col-md-6">
+        <q-card flat>
+          <q-card-section class="bg-primary text-white">
+            <div class="text-h6">Administradores</div>
+            <div class="text-caption">Usuarios con rol ADMIN</div>
+          </q-card-section>
+          <q-card-section class="q-pa-none">
+            <q-table
+              :rows="admins"
+              :columns="userColumns"
+              row-key="_id"
+              :pagination="{ rowsPerPage: 10 }"
+              no-data-label="No hay administradores registrados"
+              flat
+            >
+              <template v-slot:body-cell-status="props">
+                <q-td :props="props">
+                  <q-chip :color="props.value === 0 ? 'positive' : 'negative'" text-color="white" dense>
+                    {{ props.value === 0 ? 'Activo' : 'Inactivo' }}
+                  </q-chip>
+                </q-td>
+              </template>
+            </q-table>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <q-card flat>
+          <q-card-section class="bg-secondary text-white">
+            <div class="text-h6">Usuarios</div>
+            <div class="text-caption">Usuarios con rol USER</div>
+          </q-card-section>
+          <q-card-section class="q-pa-none">
+            <q-table
+              :rows="usuariosNormales"
+              :columns="userColumns"
+              row-key="_id"
+              :pagination="{ rowsPerPage: 10 }"
+              no-data-label="No hay usuarios registrados"
+              flat
+            >
+              <template v-slot:body-cell-status="props">
+                <q-td :props="props">
+                  <q-chip :color="props.value === 0 ? 'positive' : 'negative'" text-color="white" dense>
+                    {{ props.value === 0 ? 'Activo' : 'Inactivo' }}
+                  </q-chip>
+                </q-td>
+              </template>
+            </q-table>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
 import { required, validEmail } from '../utils/validators'
@@ -86,6 +142,7 @@ const auth = useAuthStore()
 
 const saving = ref(false)
 const showPassword = ref(false)
+const formRef = ref(null)
 
 const form = reactive({
   nombre: '',
@@ -93,6 +150,15 @@ const form = reactive({
   password: '',
   rol: 'USER'
 })
+
+const userColumns = [
+  { name: 'nombre', label: 'Nombre', field: 'nombre', align: 'left', sortable: true },
+  { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
+  { name: 'status', label: 'Estado', field: 'status', align: 'center' }
+]
+
+const admins = computed(() => auth.usuarios.filter((u) => u.rol === 'ADMIN'))
+const usuariosNormales = computed(() => auth.usuarios.filter((u) => u.rol === 'USER'))
 
 async function onSubmit() {
   saving.value = true
@@ -103,6 +169,8 @@ async function onSubmit() {
     form.email = ''
     form.password = ''
     form.rol = 'USER'
+    formRef.value?.resetValidation()
+    await auth.fetchUsuarios()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -113,4 +181,8 @@ async function onSubmit() {
     saving.value = false
   }
 }
+
+onMounted(() => {
+  auth.fetchUsuarios()
+})
 </script>
